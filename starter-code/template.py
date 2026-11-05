@@ -192,7 +192,28 @@ def call_anthropic(
     """
     # TODO: Initialize Anthropic client, create message, measure latency,
     #       extract content text and usage statistics, and return the tuple.
-    raise NotImplementedError("Implement call_anthropic")
+    import anthropic
+
+    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+    start = time.perf_counter()
+    response = client.messages.create(
+        model=model,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=temperature,
+        top_p=top_p,
+        max_tokens=max_tokens,
+    )
+    latency_seconds = time.perf_counter() - start
+
+    response_text = "".join(
+        block.text for block in response.content if hasattr(block, "text")
+    )
+    usage = {
+        "input_tokens": response.usage.input_tokens,
+        "output_tokens": response.usage.output_tokens,
+    }
+    return response_text, latency_seconds, usage
 
 
 # ---------------------------------------------------------------------------
