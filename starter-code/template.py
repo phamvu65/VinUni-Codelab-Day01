@@ -12,6 +12,10 @@ Instructions:
 import os
 import time
 from typing import Any, Callable
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 # ---------------------------------------------------------------------------
 # Estimated costs per 1M INPUT & OUTPUT tokens (USD) as of March 2026
@@ -235,14 +239,32 @@ def compare_models(prompt: str) -> dict:
             - "gpt4o_mini": { "response": str, "latency": float, "cost": float, "input_tokens": int, "output_tokens": int }
             - "gemini_flash": { "response": str, "latency": float, "cost": float, "input_tokens": int, "output_tokens": int }
     """
-    # TODO: Call call_openai with default gpt-4o model
-    # TODO: Call call_openai with gpt-4o-mini model
-    # TODO: Call call_gemini with default gemini-2.5-flash model
-    # TODO: Calculate costs exactly based on input and output token counts using PRICING_1M_TOKENS
-    #       Formula: Cost = (input_tokens * input_rate_per_1M + output_tokens * output_rate_per_1M) / 1,000,000
-    # TODO: Assemble and return the comparison dictionary.
-    raise NotImplementedError("Implement compare_models")
+    models = (
+        ("gpt4o", "gpt-4o", call_openai),
+        ("gpt4o_mini", "gpt-4o-mini", call_openai),
+        ("gemini_flash", "gemini-2.5-flash", call_gemini),
+    )
 
+    results = {}
+    for key, model, call_model in models:
+        response, latency, usage = call_model(prompt, model=model)
+        input_tokens = usage["input_tokens"]
+        output_tokens = usage["output_tokens"]
+        rates = PRICING_1M_TOKENS[model]
+
+        cost = (
+            input_tokens * rates["input"] + output_tokens * rates["output"]
+        ) / 1_000_000
+
+        results[key] = {
+            "response": response,
+            "latency": latency,
+            "cost": cost,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+        }
+
+    return results
 
 # ---------------------------------------------------------------------------
 # Task 5 — Streaming chatbot with Gemini 2.5 (Focus Model)
