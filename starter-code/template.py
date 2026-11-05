@@ -369,7 +369,11 @@ def batch_compare(prompts: list[str]) -> list[dict]:
         key "prompt" containing the original prompt string.
     """
     # TODO: iterate over prompts, call compare_models, and inject the original "prompt".
-    raise NotImplementedError("Implement batch_compare")
+    results = []
+    for prompt in prompts:
+        comparison = compare_models(prompt)
+        results.append({"prompt": prompt, **comparison})
+    return results
 
 
 # ---------------------------------------------------------------------------
@@ -387,7 +391,30 @@ def format_comparison_table(results: list[dict]) -> str:
         | Prompt | Model | Response (truncated) | Latency | Tokens (In/Out) | Cost (USD) |
     """
     # TODO: Build and return the formatted table string. Truncate response to 50 chars for clean display.
-    raise NotImplementedError("Implement format_comparison_table")
+    rows = [
+        "| Prompt | Model | Response (truncated) | Latency | Tokens (In/Out) | Cost (USD) |",
+        "| --- | --- | --- | ---: | ---: | ---: |",
+    ]
+    model_names = {
+        "gpt4o": "GPT-4o",
+        "gpt4o_mini": "GPT-4o-Mini",
+        "gemini_flash": "Gemini-Flash",
+    }
+
+    for result in results:
+        prompt = " ".join(result["prompt"].splitlines()).replace("|", r"\|")
+
+        for key, model_name in model_names.items():
+            stats = result[key]
+            response = " ".join(stats["response"].splitlines())[:50]
+            response = response.replace("|", r"\|")
+            tokens = f"{stats['input_tokens']}/{stats['output_tokens']}"
+            rows.append(
+                f"| {prompt} | {model_name} | {response} | "
+                f"{stats['latency']:.2f}s | {tokens} | {stats['cost']:.8f} |"
+            )
+
+    return "\n".join(rows)
 
 
 # ---------------------------------------------------------------------------
