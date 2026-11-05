@@ -284,7 +284,41 @@ def streaming_chatbot() -> None:
         - Keep history limited to the last 3 turns to optimize context window and costs.
     """
     # TODO: Setup interactive session, prompt user for input, stream response, and update history.
-    raise NotImplementedError("Implement streaming_chatbot")
+    from google import genai
+    from google.genai import types
+
+    client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    history = []
+
+    while True:
+        prompt = input("Bạn: ").strip()
+        if prompt.lower() in {"quit", "exit"}:
+            break
+        if not prompt:
+            continue
+
+        user_message = types.Content(
+            role="user", parts=[types.Part(text=prompt)]
+        )
+        response_parts = []
+
+        print("Gemini: ", end="", flush=True)
+        for chunk in client.models.generate_content_stream(
+            model=GEMINI_MODEL,
+            contents=[*history, user_message],
+        ):
+            if chunk.text:
+                print(chunk.text, end="", flush=True)
+                response_parts.append(chunk.text)
+        print()
+
+        if response_parts:
+            model_message = types.Content(
+                role="model",
+                parts=[types.Part(text="".join(response_parts))],
+            )
+            history.extend([user_message, model_message])
+            history = history[-6:]
 
 
 # ---------------------------------------------------------------------------
